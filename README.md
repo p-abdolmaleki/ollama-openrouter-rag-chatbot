@@ -1,4 +1,4 @@
-# Ollama Openrouter RAG chatbot
+# Ollama Openrouter RAG Chatbot
 
 A local chatbot powered by **Ollama** for embeddings and **OpenRouter** for LLM responses, wrapped in a **Streamlit** app.
 
