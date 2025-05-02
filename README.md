@@ -7,8 +7,8 @@ A local chatbot powered by **Ollama** for embeddings and **OpenRouter** for LLM 
 1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/yourusername/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/p-abdolmaleki/ollama-openrouter-rag-chatbot.git
+cd ollama-openrouter-rag-chatbot
 ````
 
 2. **Install [Ollama](https://ollama.com/download)** (follow the installation guide for your OS).
