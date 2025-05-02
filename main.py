@@ -18,7 +18,6 @@ if "user_id" not in st.session_state:
     username_input = st.text_input("Enter your username:")
     if st.button("Login") and username_input:
         st.session_state.user_id = username_input
-        st.rerun()
 
 if "user_id" in st.session_state:
     st.success(f"Welcome {st.session_state.user_id}!")
