@@ -1,16 +1,11 @@
-import os
-from dotenv import load_dotenv
 import streamlit as st
 from langchain.callbacks.streamlit import StreamlitCallbackHandler
-from utils.langchain_openrouter import ChatOpenRouter
 from utils.functions import upload_pdf, load_pdf, split_text, answer_question, PDF_DIRECTORY
 from utils.vectorstore import index_documents, retrieve_docs, clear_vectorstore
 from utils.chat_history import save_chat, get_user_history, clear_user_history
+from utils.model_config import get_llm_model
 
-load_dotenv()
-
-LLM_MODEL_NAME = os.environ.get("LLM_MODEL_NAME")
-model = ChatOpenRouter(model_name=LLM_MODEL_NAME)
+model = get_llm_model()
 
 st.title("RAG Chatbot")
 
@@ -46,6 +41,11 @@ if "user_id" in st.session_state:
         for h in user_history:
             st.chat_message("user").write(h["message"])
             st.chat_message("assistant").write(h["answer"])
+            if hasattr(h, 'sources') and h['sources']:
+                with st.chat_message("assistant"):
+                    with st.expander("📚 منابع"):
+                        for src in h['sources']:
+                            st.markdown(f"- {src}")
 
     question = st.chat_input("Ask your question:")
     if question:
@@ -68,7 +68,7 @@ if "user_id" in st.session_state:
         sources_list = answer_obj["sources"]
         sources_text = "\n".join(f"- {src}" for src in sources_list)
 
-        save_chat(st.session_state.user_id, question, answer_text)
+        save_chat(st.session_state.user_id, question, answer_text, sources_list)
 
         st.chat_message("assistant").write(answer_text)
         if sources_list:
@@ -76,4 +76,3 @@ if "user_id" in st.session_state:
                 with st.expander("📚 منابع"):
                     for src in sources_list:
                         st.markdown(f"- {src}")
-        # st.chat_message("assistant").write(f"{answer_text}\n\n📚 منابع:\n{sources_text}")

@@ -17,7 +17,7 @@ class ChatOpenRouter(ChatOpenAI):
 
     @property
     def lc_secrets(self) -> dict[str, str]:
-        return {"openai_api_key": "OPEBNROUTER_API_KEY"}
+        return {"openai_api_key": "OPENROUTER_API_KEY"}
     
     def __init__(self,
                  openai_api_key: Optional[str] = None,

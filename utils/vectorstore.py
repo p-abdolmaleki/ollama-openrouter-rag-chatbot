@@ -1,18 +1,13 @@
 import os
 import faiss
 import shutil
-from dotenv import load_dotenv
 from langchain.vectorstores import FAISS
-from langchain_ollama import OllamaEmbeddings
 from langchain.docstore.in_memory import InMemoryDocstore
-
-load_dotenv()
+from utils.model_config import get_embedding_model
 
 BASE_VECTOR_DB_DIR = "vector_db/"
 
-EMBEDDING_MODEL_NAME = os.environ.get("EMBEDDING_MODEL_NAME")
-embedding = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
-
+embedding = get_embedding_model()
 def get_user_vectorstore_dir(user_id):
     return os.path.join(BASE_VECTOR_DB_DIR, user_id)
 
