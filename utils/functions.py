@@ -2,7 +2,6 @@ from langchain_community.document_loaders import PDFPlumberLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 
-
 PDF_DIRECTORY = "pdfs/"
 
 template = """
@@ -26,7 +25,6 @@ Question:
 Answer:
 """
 
-
 def upload_pdf(file):
     with open(PDF_DIRECTORY + file.name, "wb") as f:
         f.write(file.getbuffer())
@@ -37,11 +35,31 @@ def load_pdf(file_path):
 
 def split_text(documents, chunk_size=300, chunk_overlap=50):
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    return splitter.split_documents(documents)
+    chunks = splitter.split_documents(documents)
+
+    for chunk in chunks:
+        source = chunk.metadata.get("source", "Unknown source")
+        page = chunk.metadata.get("page", "Unknown page")
+        chunk.metadata["source"] = source
+        chunk.metadata["page"] = page
+
+    return chunks
 
 def answer_question(question, retrieved_docs, user_history, model, config=None):
-    context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+    context = ""
+    sources = set()
+    for doc in retrieved_docs:
+        context += doc.page_content + "\n\n"
+        source = doc.metadata.get("source", "Unknown source")
+        page = doc.metadata.get("page", "Unknown page")
+        sources.add(f"{source.replace(PDF_DIRECTORY, "")} (Page {page})")
+
     history_str = "\n".join([f"User: {h['message']} | Assistant: {h['answer']}" for h in user_history])
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
-    return chain.invoke({"question": question, "context": context, "history": history_str}, config=config)
+    answer = chain.invoke({"question": question, "context": context, "history": history_str}, config=config)
+
+    return {
+        "answer": answer,
+        "sources": list(sources)
+    }

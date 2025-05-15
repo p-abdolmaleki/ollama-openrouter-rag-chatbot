@@ -64,8 +64,16 @@ if "user_id" in st.session_state:
             config={"callbacks": [stream_handler]}
         )
 
-        answer_text = getattr(answer_obj, "content", str(answer_obj))
+        answer_text = getattr(answer_obj["answer"], "content", str(answer_obj["answer"]))
+        sources_list = answer_obj["sources"]
+        sources_text = "\n".join(f"- {src}" for src in sources_list)
 
         save_chat(st.session_state.user_id, question, answer_text)
 
         st.chat_message("assistant").write(answer_text)
+        if sources_list:
+            with st.chat_message("assistant"):
+                with st.expander("📚 منابع"):
+                    for src in sources_list:
+                        st.markdown(f"- {src}")
+        # st.chat_message("assistant").write(f"{answer_text}\n\n📚 منابع:\n{sources_text}")

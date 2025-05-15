@@ -6,7 +6,6 @@ from langchain.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings
 from langchain.docstore.in_memory import InMemoryDocstore
 
-
 load_dotenv()
 
 BASE_VECTOR_DB_DIR = "vector_db/"
