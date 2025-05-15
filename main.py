@@ -2,77 +2,130 @@ import streamlit as st
 from langchain.callbacks.streamlit import StreamlitCallbackHandler
 from utils.functions import upload_pdf, load_pdf, split_text, answer_question, PDF_DIRECTORY
 from utils.vectorstore import index_documents, retrieve_docs, clear_vectorstore
-from utils.chat_history import save_chat, get_user_history, clear_user_history
+from utils.chat_history import save_chat, get_user_history, clear_user_history, get_chat_sessions, update_chat_name
 from utils.model_config import get_llm_model
+import uuid
 
 model = get_llm_model()
-
 st.title("RAG Chatbot")
 
+# User login
 if "user_id" not in st.session_state:
-    username_input = st.text_input("Enter your username:")
-    if st.button("Login") and username_input:
-        st.session_state.user_id = username_input
-
+    username = st.text_input("Enter your username:")
+    if st.button("Login") and username:
+        st.session_state.user_id = username
+        try:
+            st.rerun()
+        except AttributeError:
+            pass
 if "user_id" in st.session_state:
-    st.success(f"Welcome {st.session_state.user_id}!")
+    user_id = st.session_state.user_id
+    st.success(f"Welcome {user_id}!")
 
+    # Chat session management
+    sessions = get_chat_sessions(user_id)
+    if not sessions:
+        # create default session
+        default_id = str(uuid.uuid4())[:8]
+        save_chat(user_id, default_id, chat_name="New Chat 1", message=None, answer=None, sources=[])
+        sessions = get_chat_sessions(user_id)
+
+    # labels and mapping
+    labels = [s['chat_name'] or s['chat_id'] for s in sessions]
+    chat_map = {s['chat_name'] or s['chat_id']: s['chat_id'] for s in sessions}
+
+    # session selectbox
+    selected_label = st.selectbox(
+        "Select a chat:",
+        labels,
+        index=labels.index(st.session_state.get('chat_label', labels[0])) if st.session_state.get('chat_label') in labels else 0
+    )
+    chat_id = chat_map[selected_label]
+    st.session_state.chat_id = chat_id
+    st.session_state.chat_label = selected_label
+
+    # new chat button
+    if st.button("➕ Start New Chat"):
+        new_id = str(uuid.uuid4())[:8]
+        new_name = f"New Chat {len(sessions)+1}"
+        save_chat(user_id, new_id, chat_name=new_name, message=None, answer=None, sources=[])
+        # refresh sessions
+        sessions = get_chat_sessions(user_id)
+        st.success(f"Started new chat: {new_name}")
+        try:
+            st.rerun()
+        except AttributeError:
+            pass
+
+    st.write(f"🗂️ Current Chat: **{st.session_state.chat_label}** (`{chat_id}`)")
+
+    # utilities
     if st.button("🗑️ Delete all your uploaded files & vectors"):
-        clear_vectorstore(st.session_state.user_id)
+        clear_vectorstore(user_id)
         st.success("All your uploaded files have been deleted.")
-    
     if st.button("🗑️ Delete your chat history"):
-        clear_user_history(st.session_state.user_id)
+        clear_user_history(user_id, chat_id)
         st.success("Your chat history has been deleted.")
 
-    upload_file = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=True)
-
-    if upload_file:
-        for f in upload_file:
+    # upload PDFs
+    uploaded = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=True)
+    if uploaded:
+        for f in uploaded:
             upload_pdf(f)
             docs = load_pdf(PDF_DIRECTORY + f.name)
             chunks = split_text(docs)
-            index_documents(chunks, st.session_state.user_id)
+            index_documents(chunks, user_id)
         st.success("All PDFs processed and indexed.")
 
-    user_history = get_user_history(st.session_state.user_id)
-    if user_history:
-        st.write("Chat history:")
-        for h in user_history:
-            st.chat_message("user").write(h["message"])
-            st.chat_message("assistant").write(h["answer"])
-            if hasattr(h, 'sources') and h['sources']:
-                with st.chat_message("assistant"):
-                    with st.expander("📚 منابع"):
-                        for src in h['sources']:
-                            st.markdown(f"- {src}")
+    # display history
+    history = get_user_history(user_id, chat_id)
+    if history:
+        for item in history:
+            if item.get('message'):
+                st.chat_message("user").write(item['message'])
+            if item.get('answer'):
+                st.chat_message("assistant").write(item['answer'])
+                if item.get('sources'):
+                    with st.chat_message("assistant"):
+                        with st.expander("📚 منابع"):
+                            for src in item['sources']:
+                                st.markdown(f"- {src}")
 
+    # user input
     question = st.chat_input("Ask your question:")
     if question:
         st.chat_message("user").write(question)
-
-        stream_placeholder = st.empty()
-        stream_handler = StreamlitCallbackHandler(stream_placeholder)
-
-        retrieved_docs = retrieve_docs(question, user_id=st.session_state.user_id)
-
-        answer_obj = answer_question(
-            question,
-            retrieved_docs,
-            user_history,
-            model,
-            config={"callbacks": [stream_handler]}
-        )
-
-        answer_text = getattr(answer_obj["answer"], "content", str(answer_obj["answer"]))
-        sources_list = answer_obj["sources"]
-        sources_text = "\n".join(f"- {src}" for src in sources_list)
-
-        save_chat(st.session_state.user_id, question, answer_text, sources_list)
-
+        handler = StreamlitCallbackHandler(st.empty())
+        docs = retrieve_docs(question, user_id=user_id)
+        answer_obj = answer_question(question, docs, history, model, config={"callbacks": [handler]})
+        # extract answer
+        answer_val = answer_obj['answer']
+        answer_text = answer_val.content if hasattr(answer_val, 'content') else answer_val
+        sources = answer_obj['sources']
         st.chat_message("assistant").write(answer_text)
-        if sources_list:
+        if sources:
             with st.chat_message("assistant"):
                 with st.expander("📚 منابع"):
-                    for src in sources_list:
+                    for src in sources:
                         st.markdown(f"- {src}")
+        # rename chat if default
+        if st.session_state.chat_label.startswith("New Chat"):
+            prompt = (
+                f"Please give me a suitable name for this conversation. Only return the name."
+                f"\nQuestion: {question}\nAnswer: {answer_text}"
+            )
+            name_resp = model.invoke(prompt)
+            new_label = name_resp.content.strip() if hasattr(name_resp, 'content') else str(name_resp).strip()
+            st.session_state.chat_label = new_label
+            update_chat_name(user_id, chat_id, new_label)
+            # refresh sessions after rename
+            sessions = get_chat_sessions(user_id)
+            st.success(f"Conversation renamed to: {new_label}")
+            save_chat(user_id, chat_id, chat_name=st.session_state.chat_label, message=question, answer=answer_text, sources=sources)
+            try:
+                st.rerun()
+            except AttributeError:
+                pass
+        # save chat entry
+        else:
+            save_chat(user_id, chat_id, chat_name=st.session_state.chat_label, message=question, answer=answer_text, sources=sources)
