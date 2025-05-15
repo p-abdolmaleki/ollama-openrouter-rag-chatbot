@@ -52,7 +52,7 @@ def answer_question(question, retrieved_docs, user_history, model, config=None):
         context += doc.page_content + "\n\n"
         source = doc.metadata.get("source", "Unknown source")
         page = doc.metadata.get("page", "Unknown page")
-        sources.add(f"{source.replace(PDF_DIRECTORY, "")} (Page {page})")
+        sources.add(f"{source.replace(PDF_DIRECTORY, '')} (Page {page})")
 
     history_str = "\n".join([f"User: {h['message']} | Assistant: {h['answer']}" for h in user_history])
     prompt = ChatPromptTemplate.from_template(template)
