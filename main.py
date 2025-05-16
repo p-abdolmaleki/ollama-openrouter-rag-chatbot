@@ -10,7 +10,7 @@ model = get_llm_model()
 st.title("RAG Chatbot")
 
 # User login
-if "user_id" not in st.session_state:
+if "user_id" not in st.session_state or st.session_state.user_id is None:
     username = st.text_input("Enter your username:")
     if st.button("Login") and username:
         st.session_state.user_id = username
@@ -18,9 +18,17 @@ if "user_id" not in st.session_state:
             st.rerun()
         except AttributeError:
             pass
-if "user_id" in st.session_state:
+
+if "user_id" in st.session_state and st.session_state.user_id is not None:
     user_id = st.session_state.user_id
     st.success(f"Welcome {user_id}!")
+    if st.button('Logout'):
+        st.session_state.user_id = None
+        user_id = st.session_state.user_id
+        try:
+            st.rerun()
+        except AttributeError:
+            pass
 
     # Chat session management
     sessions = get_chat_sessions(user_id)
