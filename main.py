@@ -19,12 +19,11 @@ if "user_id" not in st.session_state or st.session_state.user_id is None:
         except AttributeError:
             pass
 
-if "user_id" in st.session_state and st.session_state.user_id is not None:
+if "user_id" in st.session_state and st.session_state.user_id:
     user_id = st.session_state.user_id
     st.success(f"Welcome {user_id}!")
     if st.button('Logout'):
         st.session_state.user_id = None
-        user_id = st.session_state.user_id
         try:
             st.rerun()
         except AttributeError:
@@ -33,31 +32,33 @@ if "user_id" in st.session_state and st.session_state.user_id is not None:
     # Chat session management
     sessions = get_chat_sessions(user_id)
     if not sessions:
-        # create default session
         default_id = str(uuid.uuid4())[:8]
         save_chat(user_id, default_id, chat_name="New Chat 1", message=None, answer=None, sources=[])
         sessions = get_chat_sessions(user_id)
 
-    # labels and mapping
     labels = [s['chat_name'] or s['chat_id'] for s in sessions]
     chat_map = {s['chat_name'] or s['chat_id']: s['chat_id'] for s in sessions}
 
-    # session selectbox
     selected_label = st.selectbox(
         "Select a chat:",
         labels,
-        index=labels.index(st.session_state.get('chat_label', labels[0])) if st.session_state.get('chat_label') in labels else 0
+        index=labels.index(st.session_state.get('chat_label', labels[0]))
+            if st.session_state.get('chat_label') in labels else 0
     )
     chat_id = chat_map[selected_label]
     st.session_state.chat_id = chat_id
     st.session_state.chat_label = selected_label
 
-    # new chat button
+    # Initialize set of uploaded files per chat
+    uploaded_key = f"uploaded_{user_id}_{chat_id}"
+    if uploaded_key not in st.session_state:
+        st.session_state[uploaded_key] = set()
+
+    # New chat button
     if st.button("➕ Start New Chat"):
         new_id = str(uuid.uuid4())[:8]
         new_name = f"New Chat {len(sessions)+1}"
         save_chat(user_id, new_id, chat_name=new_name, message=None, answer=None, sources=[])
-        # refresh sessions
         sessions = get_chat_sessions(user_id)
         st.success(f"Started new chat: {new_name}")
         try:
@@ -67,25 +68,31 @@ if "user_id" in st.session_state and st.session_state.user_id is not None:
 
     st.write(f"🗂️ Current Chat: **{st.session_state.chat_label}** (`{chat_id}`)")
 
-    # utilities
-    if st.button("🗑️ Delete all your uploaded files & vectors"):
-        clear_vectorstore(user_id)
+    # Utilities
+    if st.button("🗑️ Delete your uploaded files & vectors in this chat"):
+        clear_vectorstore(user_id, chat_id)
+        st.session_state[uploaded_key].clear()
         st.success("All your uploaded files have been deleted.")
-    if st.button("🗑️ Delete your chat history"):
+    if st.button("🗑️ Delete chat history"):
         clear_user_history(user_id, chat_id)
         st.success("Your chat history has been deleted.")
 
-    # upload PDFs
-    uploaded = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=True)
-    if uploaded:
-        for f in uploaded:
-            upload_pdf(f)
-            docs = load_pdf(PDF_DIRECTORY + f.name)
-            chunks = split_text(docs)
-            index_documents(chunks, user_id)
-        st.success("All PDFs processed and indexed.")
+            # PDF upload and indexing only new files
+    uploader_widget_key = f"uploader_{user_id}_{chat_id}"
+    uploaded_files = st.file_uploader(
+        "Upload PDF", type=["pdf"], accept_multiple_files=True, key=uploader_widget_key
+    )
+    if uploaded_files:
+        for f in uploaded_files:
+            if f.name not in st.session_state[uploaded_key]:
+                upload_pdf(f)
+                docs = load_pdf(PDF_DIRECTORY + f.name)
+                chunks = split_text(docs)
+                index_documents(chunks, user_id, chat_id)
+                st.session_state[uploaded_key].add(f.name)
+        st.success("All new PDFs processed and indexed.")
 
-    # display history
+    # Display history"
     history = get_user_history(user_id, chat_id)
     if history:
         for item in history:
@@ -99,14 +106,16 @@ if "user_id" in st.session_state and st.session_state.user_id is not None:
                             for src in item['sources']:
                                 st.markdown(f"- {src}")
 
-    # user input
+    # User question
     question = st.chat_input("Ask your question:")
     if question:
         st.chat_message("user").write(question)
         handler = StreamlitCallbackHandler(st.empty())
-        docs = retrieve_docs(question, user_id=user_id)
-        answer_obj = answer_question(question, docs, history, model, config={"callbacks": [handler]})
-        # extract answer
+        docs = retrieve_docs(question, user_id=user_id, chat_id=chat_id)
+        answer_obj = answer_question(
+            question, docs, history, model,
+            config={"callbacks": [handler]}
+        )
         answer_val = answer_obj['answer']
         answer_text = answer_val.content if hasattr(answer_val, 'content') else answer_val
         sources = answer_obj['sources']
@@ -116,24 +125,29 @@ if "user_id" in st.session_state and st.session_state.user_id is not None:
                 with st.expander("📚 منابع"):
                     for src in sources:
                         st.markdown(f"- {src}")
-        # rename chat if default
+        # Rename chat on first question
         if st.session_state.chat_label.startswith("New Chat"):
             prompt = (
-                f"Please give me a suitable name for this conversation. Only return the name."
-                f"\nQuestion: {question}\nAnswer: {answer_text}"
+                "Please give me a suitable name for this conversation. Only return the name."
+                f"Question: {question}\nAnswer: {answer_text}"
             )
             name_resp = model.invoke(prompt)
             new_label = name_resp.content.strip() if hasattr(name_resp, 'content') else str(name_resp).strip()
             st.session_state.chat_label = new_label
             update_chat_name(user_id, chat_id, new_label)
-            # refresh sessions after rename
-            sessions = get_chat_sessions(user_id)
+            save_chat(
+                user_id, chat_id,
+                chat_name=st.session_state.chat_label,
+                message=question, answer=answer_text, sources=sources
+            )
             st.success(f"Conversation renamed to: {new_label}")
-            save_chat(user_id, chat_id, chat_name=st.session_state.chat_label, message=question, answer=answer_text, sources=sources)
             try:
                 st.rerun()
             except AttributeError:
                 pass
-        # save chat entry
         else:
-            save_chat(user_id, chat_id, chat_name=st.session_state.chat_label, message=question, answer=answer_text, sources=sources)
+            save_chat(
+                user_id, chat_id,
+                chat_name=st.session_state.chat_label,
+                message=question, answer=answer_text, sources=sources
+            )
