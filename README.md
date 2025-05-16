@@ -1,62 +1,88 @@
 # Ollama OpenRouter RAG Chatbot
 
-A local chatbot powered by **Ollama** for embeddings and **OpenRouter** for LLM responses, wrapped in a **Streamlit** app.
+A local Retrieval-Augmented Generation (RAG) chatbot built with **Ollama**, **OpenRouter**, and **Streamlit**.  
+It uses PDFs as knowledge sources and stores multi-chat history in **MongoDB**.
+
+---
 
 ## 🚀 How to Run
 
-1. **Clone the repository:**
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/p-abdolmaleki/ollama-openrouter-rag-chatbot.git
 cd ollama-openrouter-rag-chatbot
 ````
 
-2. **Install [Ollama](https://ollama.com/download)** (follow the installation guide for your OS).
+### 2. Install Ollama
 
-3. **Pull your preferred embedding model using Ollama:**
+Download and install from: [https://ollama.com/download](https://ollama.com/download)
+
+### 3. Pull embedding model via Ollama
 
 ```bash
-ollama pull <embedding_model_name>
+ollama pull <model_name>
 ```
 
-(For example: `ollama pull deepseek-r1:1.5b`)
+You can replace `model_name` with your preferred embedding model (must match `.env`).
 
-4. **Install Python dependencies:**
+### 4. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-5. **Configure environment variables:**
+### 5. Configure environment variables
 
-* Copy the sample environment file:
+Copy the sample config and edit it:
 
 ```bash
 cp sample.env .env
 ```
 
-* Open `.env` and fill in your keys and models:
+Edit `.env` and provide:
 
-```env
-OPENROUTER_API_KEY=your_openrouter_api_key
-LLM_MODEL_NAME=your_openrouter_model_name
-EMBEDDING_MODEL_NAME=your_ollama_embedding_model_name
-```
+* Your `OPENROUTER_API_KEY`
+* LLM and embedding model names
+* MongoDB connection settings
 
-6. **Run the chatbot:**
+### 6. Start the app
 
 ```bash
 streamlit run main.py
 ```
 
-🎉 Done! Enjoy chatting with your local chatbot.
+✅ You’re all set! Upload some PDFs and start chatting.
 
 ---
 
+## ⚙️ Environment Configuration (`.env`)
 
-## 📚 Notes
+| Variable                 | Description                          |
+| ------------------------ | ------------------------------------ |
+| `LLM_BACKEND`            | `openrouter` or `ollama`             |
+| `EMBEDDING_BACKEND`      | Only `ollama` supported for now      |
+| `OPENROUTER_API_KEY`     | Your OpenRouter API key              |
+| `OPENROUTER_LLM_MODEL`   | OpenRouter model name (e.g. gpt-3.5) |
+| `OLLAMA_LLM_MODEL`       | Ollama model name (e.g. mistral)     |
+| `OLLAMA_EMBEDDING_MODEL` | Embedding model via Ollama           |
+| `MONGO_URI`              | MongoDB URI (e.g. localhost:27017)   |
+| `MONGO_INITDB_DATABASE`  | DB name for storing chats            |
 
-* You'll need a valid API key from [OpenRouter](https://openrouter.ai/) to access LLMs.
-* Make sure the embedding model specified in `.env` is already pulled via Ollama before running the app.
+---
 
+## 📝 Features
 
+* 📄 PDF uploader with chunked indexing
+* 🧠 Local embeddings via Ollama
+* 💬 OpenRouter or Ollama as LLM
+* 🗂️ Multi-chat history stored in MongoDB
+* 🔁 Persistent context and memory
+* 🧪 Ready for further backend upgrades
+
+---
+
+## 🧠 Notes
+
+* Make sure the model is pulled via Ollama before running.
+* OpenRouter requires a valid API key from [https://openrouter.ai](https://openrouter.ai).
