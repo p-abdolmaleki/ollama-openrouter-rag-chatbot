@@ -102,7 +102,7 @@ if "user_id" in st.session_state and st.session_state.user_id:
                 st.chat_message("assistant").write(item['answer'])
                 if item.get('sources'):
                     with st.chat_message("assistant"):
-                        with st.expander("📚 منابع"):
+                        with st.expander("📚 source"):
                             for src in item['sources']:
                                 st.markdown(f"- {src}")
 
@@ -122,7 +122,7 @@ if "user_id" in st.session_state and st.session_state.user_id:
         st.chat_message("assistant").write(answer_text)
         if sources:
             with st.chat_message("assistant"):
-                with st.expander("📚 منابع"):
+                with st.expander("📚 source"):
                     for src in sources:
                         st.markdown(f"- {src}")
         # Rename chat on first question
