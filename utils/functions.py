@@ -81,10 +81,9 @@ def answer_question(question, retrieved_docs, user_history, model, config=None):
         page = doc.metadata.get("page", "Unknown page")
         sources.add(f"{source.replace(PDF_DIRECTORY, '')} (Page {page})")
 
-    history_str = "\n".join([f"User: {h['message']} | Assistant: {h['answer']}" for h in user_history])
     prompt = ChatPromptTemplate.from_template(base_template)
     chain = prompt | model
-    answer = chain.invoke({"question": question, "context": context, "history": history_str}, config=config)
+    answer = chain.invoke({"question": question, "context": context, "history": user_history}, config=config)
 
     return {
         "answer": answer,
