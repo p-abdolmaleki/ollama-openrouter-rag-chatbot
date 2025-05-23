@@ -1,6 +1,6 @@
 import streamlit as st
 from langchain.callbacks.streamlit import StreamlitCallbackHandler
-from utils.functions import upload_pdf, load_pdf, split_text, answer_question, PDF_DIRECTORY
+from utils.functions import upload_pdf, load_pdf, split_text, answer_question, get_chat_name, get_usefull_chat_history, PDF_DIRECTORY
 from utils.vectorstore import index_documents, retrieve_docs, clear_vectorstore
 from utils.chat_history import save_chat, get_user_history, clear_user_history, get_chat_sessions, update_chat_name
 from utils.model_config import get_llm_model
@@ -119,8 +119,10 @@ if "user_id" in st.session_state and st.session_state.user_id:
         st.chat_message("user").write(question)
         handler = StreamlitCallbackHandler(st.empty())
         docs = retrieve_docs(question, user_id=user_id, chat_id=chat_id)
+        usefull_chat_history_resp = get_usefull_chat_history(history, question, model)
+        usefull_chat_history_text = usefull_chat_history_resp.content if hasattr(usefull_chat_history_resp, 'content') else str(usefull_chat_history_resp)
         answer_obj = answer_question(
-            question, docs, history, model,
+            question, docs, usefull_chat_history_text, model,
             config={"callbacks": [handler]}
         )
         answer_val = answer_obj['answer']
@@ -135,11 +137,11 @@ if "user_id" in st.session_state and st.session_state.user_id:
 
         # Rename chat if it's still "New Chat"
         if st.session_state.chat_label.startswith("New Chat"):
-            prompt = (
-                "Please give me a suitable name for this conversation. Only return the name."
-                f"Question: {question}\nAnswer: {answer_text}"
+            name_resp = get_chat_name(
+                question=question,
+                answer_text=answer_text,
+                model=model
             )
-            name_resp = model.invoke(prompt)
             new_label = name_resp.content.strip() if hasattr(name_resp, 'content') else str(name_resp).strip()
             st.session_state.chat_label = new_label
             update_chat_name(user_id, chat_id, new_label)

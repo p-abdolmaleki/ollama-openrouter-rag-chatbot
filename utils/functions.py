@@ -4,25 +4,52 @@ from langchain_core.prompts import ChatPromptTemplate
 
 PDF_DIRECTORY = "pdfs/"
 
-template = """
-You are an assistant who answers questions based only on the text provided and the chat history.
-Use the following guidelines:
+base_template = """
+You are an assistant who answers questions using only the provided context and chat history. Follow these rules:
 
-- If the answer is found directly in the text, answer based only on the text and explicitly state that the answer is based on the text provided.
-- If the answer is not found in the text but is in the chat history, answer based on the chat history and explicitly state that the answer is based on previous conversations.
-- If the answer is found in a combination of text and chat history, answer based on the text and chat history and explicitly state that the answer is based on the text and previous conversations.
-- If the answer is found neither in the text nor in the chat history, answer based on your own internal knowledge and explicitly state that the answer is based on your own internal knowledge.
+- If the answer is found directly in the context, answer based only on the context and clearly state that your answer is based on the provided context.
+- If the answer is not in the context but is in the chat history, answer based on the chat history and clearly state that your answer is based on the previous conversation.
+- If the answer is found in both the context and the chat history, use both sources and clearly state that your answer is based on the context and previous conversation.
+- If the answer is not found in either the context or the chat history, respond using your own internal knowledge and clearly state that the answer is based on your own internal knowledge.
 
 Context:
 {context}
 
-Chat history:
+Chat History:
 {history}
 
 Question:
 {question}
 
 Answer:
+"""
+
+chat_name_template = """
+Please give a suitable name for this conversation. Only return the name.
+
+Question: 
+{question}
+Answer: 
+{answer_text}
+Chat Name:
+"""
+
+usefull_chat_history_template = """
+You are an assistant tasked with identifying all parts of a conversation that are relevant to a specific user question.
+
+Instructions:
+- Read the entire chat history and the given user question.
+- Return only the parts of the chat history that are relevant to answering the question.
+- Do not summarize or explain. Just extract and return the original text from the chat history that relates to the question.
+- If nothing is relevant, return nothing.
+
+Chat History:
+{chat_history}
+
+Question:
+{question}
+
+Relevant parts:
 """
 
 def upload_pdf(file):
@@ -55,7 +82,7 @@ def answer_question(question, retrieved_docs, user_history, model, config=None):
         sources.add(f"{source.replace(PDF_DIRECTORY, '')} (Page {page})")
 
     history_str = "\n".join([f"User: {h['message']} | Assistant: {h['answer']}" for h in user_history])
-    prompt = ChatPromptTemplate.from_template(template)
+    prompt = ChatPromptTemplate.from_template(base_template)
     chain = prompt | model
     answer = chain.invoke({"question": question, "context": context, "history": history_str}, config=config)
 
@@ -63,3 +90,15 @@ def answer_question(question, retrieved_docs, user_history, model, config=None):
         "answer": answer,
         "sources": list(sources)
     }
+
+def get_chat_name(question, answer_text, model):
+    prompt = ChatPromptTemplate.from_template(chat_name_template)
+    chain = prompt | model
+    name = chain.invoke({"question": question, "answer_text": answer_text})
+    return name
+
+def get_usefull_chat_history(history, question, model):
+    prompt = ChatPromptTemplate.from_template(usefull_chat_history_template)
+    chain = prompt | model
+    summary = chain.invoke({"chat_history": history, "question": question})
+    return summary
