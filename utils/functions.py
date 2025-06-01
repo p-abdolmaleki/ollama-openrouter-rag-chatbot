@@ -53,8 +53,13 @@ Relevant parts:
 """
 
 def upload_pdf(file):
-    with open(PDF_DIRECTORY + file.name, "wb") as f:
-        f.write(file.getbuffer())
+    filename = getattr(file, "name", None) or getattr(file, "filename", None)
+    if hasattr(file, "getbuffer"):
+        content = file.getbuffer()
+    else:
+        content = file.file.read()
+    with open(PDF_DIRECTORY + filename, "wb") as f:
+        f.write(content)
 
 def load_pdf(file_path):
     loader = PDFPlumberLoader(file_path)
