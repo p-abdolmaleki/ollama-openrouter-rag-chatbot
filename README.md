@@ -12,7 +12,7 @@ It uses PDFs as knowledge sources and stores multi-chat history in **MongoDB**.
 ```bash
 git clone https://github.com/p-abdolmaleki/ollama-openrouter-rag-chatbot.git
 cd ollama-openrouter-rag-chatbot
-````
+```
 
 ### 2. Install Ollama
 
@@ -71,6 +71,57 @@ streamlit run main.py
 
 ---
 
+## 🆕 API Endpoints
+
+A FastAPI backend is now included for programmatic access.  
+**Base URL:** `/api`
+
+### Authentication
+
+- `POST /api/auth/login`  
+  Request: `{ "username": "your_name" }`  
+  Response: `{ "user_id": "..." }`
+
+### Chat
+
+- `GET /api/chat/chats?user_id=...`  
+  List chat sessions for a user.
+
+- `POST /api/chat/start`  
+  Start a new chat.  
+  Request: `{ "user_id": "..." }`
+
+- `POST /api/chat/ask`  
+  Ask a question in a chat.  
+  Request: `{ "user_id": "...", "chat_id": "...", "question": "..." }`
+
+- `GET /api/chat/history?user_id=...&chat_id=...`  
+  Get chat history.
+
+- `POST /api/chat/clear_history`  
+  Clear chat history.  
+  Request: `{ "user_id": "...", "chat_id": "..." }`
+
+- `POST /api/chat/delete_files`  
+  Delete uploaded files and vectors for a chat.  
+  Request: `{ "user_id": "...", "chat_id": "..." }`
+
+- `POST /api/chat/generate_name`  
+  Generate a chat name based on the first message and answer.  
+  Request: `{ "first_message": "...", "answer_text": "...", "chat_id": "...", "user_id": "..." }`
+
+- `POST /api/chat/useful_history`  
+  Get useful chat history for a question.  
+  Request: `{ "question": "...", "user_id": "...", "chat_id": "..." }`
+
+### Upload
+
+- `POST /api/upload/chat/upload`  
+  Upload a PDF for a chat.  
+  Form fields: `user_id`, `chat_id`, `file` (PDF)
+
+---
+
 ## 📝 Features
 
 * 📄 PDF uploader with chunked indexing
@@ -79,6 +130,7 @@ streamlit run main.py
 * 🗂️ Multi-chat history stored in MongoDB
 * 🔁 Persistent context and memory
 * 🧪 Ready for further backend upgrades
+* 🆕 RESTful API for chat, upload, and management
 
 ---
 
