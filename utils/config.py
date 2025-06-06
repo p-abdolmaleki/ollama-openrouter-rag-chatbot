@@ -10,14 +10,14 @@ load_dotenv()
 def get_embedding_model():
     backend = os.environ.get("EMBEDDING_BACKEND")
     if backend == "ollama":
-        return OllamaEmbeddings(model=os.environ.get("OLLAMA_EMBEDDING_MODEL")) #, base_url=os.environ.get("OLLAMA_EMBEDDING_BASE_URL"))
+        return OllamaEmbeddings(model=os.environ.get("OLLAMA_EMBEDDING_MODEL"), base_url=os.environ.get("OLLAMA_EMBEDDING_BASE_URL"))
     else:
         raise ValueError(f"Unsupported EMBEDDING_BACKEND: {backend}")
 
 def get_llm_model():
     backend = os.environ.get("LLM_BACKEND")
     if backend == "ollama":
-        return ChatOllama(model=os.environ.get("OLLAMA_LLM_MODEL")) #, base_url=os.environ.get("OLLAMA_LLM_BASE_URL"))
+        return ChatOllama(model=os.environ.get("OLLAMA_LLM_MODEL"), base_url=os.environ.get("OLLAMA_LLM_BASE_URL"))
     elif backend == "openrouter":
         return ChatOpenRouter(model_name=os.environ.get("OPENROUTER_LLM_MODEL"), api_key=os.environ.get("OPENROUTER_API_KEY"))
     else:
@@ -38,3 +38,12 @@ def get_mongo_config():
         "password": mongo_pass,
         "db_name": mongo_db_name
     }
+
+def get_generate_name_model():
+    backend = os.environ.get("GENERATE_NAME_BACKEND")
+    if backend == "ollama":
+        return ChatOllama(model=os.environ.get("OLLAMA_GENERATE_NAME_MODEL"), base_url=os.environ.get("OLLAMA_GENERATE_NAME_BASE_URL"))
+    elif backend == "openrouter":
+        return ChatOpenRouter(model_name=os.environ.get("OPENROUTER_GENERATE_NAME_MODEL"), api_key=os.environ.get("OPENROUTER_API_KEY"))
+    else:
+        raise ValueError(f"Unsupported GENERATE_NAME_BACKEND: {backend}")

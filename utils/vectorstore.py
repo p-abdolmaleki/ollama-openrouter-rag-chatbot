@@ -3,7 +3,7 @@ import faiss
 import shutil
 from langchain.vectorstores import FAISS
 from langchain.docstore.in_memory import InMemoryDocstore
-from utils.get_config import get_embedding_model
+from utils.config import get_embedding_model
 
 BASE_VECTOR_DB_DIR = "vector_db/"
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter
-from ..schemas.chat import ChatRequest, ChatResponse, ChatHistoryResponse, ChatSessionResponse, GenerateNameRequest
+from ..schemas.chat import ChatRequest, GenerateNameRequest
 from ..schemas.common import ApiResponse
 from utils.chat_history import get_user_history, get_chat_sessions, save_chat, clear_user_history, update_chat_name
-from utils.get_config import get_llm_model
+from utils.config import get_llm_model, get_generate_name_model
 from utils.vectorstore import retrieve_docs, clear_vectorstore
 from utils.functions import answer_question, get_chat_name, get_usefull_chat_history
 import uuid
@@ -52,7 +52,7 @@ def delete_files(user_id: str, chat_id: str):
 
 @router.post("/generate_name", response_model=ApiResponse)
 def generate_chat_name(request: GenerateNameRequest):
-    model = get_llm_model()
+    model = get_generate_name_model()
     name_resp = get_chat_name(request.first_message, request.answer_text, model)
     new_label = name_resp.content.strip() if hasattr(name_resp, 'content') else str(name_resp).strip()
     update_chat_name(request.user_id, request.chat_id, new_label)

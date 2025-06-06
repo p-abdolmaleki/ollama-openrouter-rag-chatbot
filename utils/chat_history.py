@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from utils.get_config import get_mongo_config
+from utils.config import get_mongo_config
 from datetime import datetime
 
 
