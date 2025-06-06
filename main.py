@@ -3,7 +3,7 @@ from langchain.callbacks.streamlit import StreamlitCallbackHandler
 from utils.functions import upload_pdf, load_pdf, split_text, answer_question, get_chat_name, get_usefull_chat_history, PDF_DIRECTORY
 from utils.vectorstore import index_documents, retrieve_docs, clear_vectorstore
 from utils.chat_history import save_chat, get_user_history, clear_user_history, get_chat_sessions, update_chat_name
-from utils.model_config import get_llm_model
+from utils.get_config import get_llm_model
 import uuid
 
 model = get_llm_model()
@@ -141,7 +141,7 @@ if "user_id" in st.session_state and st.session_state.user_id:
                 question=question,
                 answer_text=answer_text,
                 model=model
-            )
+            ) 
             new_label = name_resp.content.strip() if hasattr(name_resp, 'content') else str(name_resp).strip()
             st.session_state.chat_label = new_label
             update_chat_name(user_id, chat_id, new_label)

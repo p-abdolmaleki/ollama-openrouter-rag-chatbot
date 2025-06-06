@@ -1,14 +1,12 @@
 from pymongo import MongoClient
-import os
-from dotenv import load_dotenv
+from utils.get_config import get_mongo_config
 from datetime import datetime
 
-load_dotenv()
 
-MONGO_URI = os.environ.get("MONGO_URI")
-MONGO_USER = os.environ.get("MONGO_INITDB_ROOT_USERNAME")
-MONGO_PASS = os.environ.get("MONGO_INITDB_ROOT_PASSWORD")
-MONGO_DB_NAME = os.environ.get("MONGO_INITDB_DATABASE")
+MONGO_URI = get_mongo_config()["uri"]
+MONGO_USER = get_mongo_config()["user"]
+MONGO_PASS = get_mongo_config()["password"]
+MONGO_DB_NAME = get_mongo_config()["db_name"]
 
 client = MongoClient(
     MONGO_URI,
@@ -46,8 +44,8 @@ def get_user_history(user_id, chat_id):
     cursor = collection.find({"user_id": user_id, "chat_id": chat_id}).sort("timestamp", 1)
     return [
         {
-            "message": doc["message"],
-            "answer": doc["answer"],
+            "message": doc["message"] if doc["message"] is not None else "",
+            "answer": doc["answer"] if doc["answer"] is not None else "",
             "sources": doc.get("sources", [])
         }
         for doc in cursor
